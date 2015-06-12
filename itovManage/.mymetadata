@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project-module
+  type="WEB"
+  name="itovManage"
+  id="myeclipse.1405481450171"
+  context-root="/itovManage"
+  j2ee-spec="1.4"
+  archive="itovManage.war">
+  <attributes>
+    <attribute name="webrootdir" value="WebContent" />
+  </attributes>
+</project-module>
+

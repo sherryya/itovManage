@@ -1,0 +1,416 @@
+package dwz.web.terminalmanagement;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.reflect.Type;
+import java.text.DateFormat;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.poi.hssf.usermodel.HSSFCell;
+import org.apache.poi.hssf.usermodel.HSSFDateUtil;
+import org.apache.poi.hssf.usermodel.HSSFRow;
+import org.apache.poi.hssf.usermodel.HSSFSheet;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.util.FileCopyUtils;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import rest.util.ConnRest;
+import dwz.manageRest.dto.FeedbackVO;
+import dwz.manageRest.dto.TIto_shop4s_user;
+import dwz.manageRest.dto.TItov_terminal_manage;
+import dwz.manageRest.dto.TerminalVO;
+import dwz.manageRest.dto.Tzdc_query_feedback;
+import dwz.web.BaseController;
+
+@Controller("terminalmanagement.TerminalController")
+@RequestMapping(value="/terminalmanagement/terminal")
+public class TerminalController extends BaseController{
+	/**
+	 * 设备信息列表
+	 * @param vo
+	 * @param model
+	 * @return
+	 * @throws Exception
+	 */
+	@SuppressWarnings("unchecked")
+	@RequestMapping("/list")
+	public String list(TerminalVO vo, Model model) throws Exception {
+		@SuppressWarnings("rawtypes")
+		Map paramMap = new HashMap();
+		paramMap.put("page_num", Integer.valueOf(vo.getPageNum()));
+		paramMap.put("page_size", Integer.valueOf(vo.getPageSize()));
+		paramMap.put("terminal_name", vo.getTerminal_name());
+		paramMap.put("terminal_imei", vo.getTerminal_imei());
+		paramMap.put("terminal_device_type",vo.getTerminal_device_type());
+		paramMap.put("terminal_status",vo.getTerminal_status());
+		List<TItov_terminal_manage> list=new ArrayList<TItov_terminal_manage>();
+		String result="";
+		result=new ConnRest().getResult(paramMap, "terminal.query.get");	
+		System.out.println("result---->"+result);
+		ObjectMapper mapper = new ObjectMapper();
+		JsonNode jsonNode = mapper.readTree(result);
+		JsonNode bodyNode = jsonNode.get("body");
+		System.out.println("body:" + bodyNode);
+	    Map<String, Object> map = new HashMap<String, Object>();
+		Type mapType_v = new TypeToken<HashMap<String, Object>>(){}.getType();
+		Gson gson_v=new Gson();
+		map=gson_v.fromJson(bodyNode.toString(), mapType_v);
+		Type listType = new TypeToken<ArrayList<TItov_terminal_manage>>(){}.getType();
+		Gson gson_v1=new Gson();
+		list=gson_v1.fromJson(map.get("result").toString(), listType);
+		Integer totalCount =Integer.parseInt(map.get("totalCount").toString().split("\\.")[0]);
+		vo.setTotalCount(totalCount);
+		model.addAttribute("terminalList", list);
+		model.addAttribute("vo", vo);
+		return "/management/terminal/list";
+	}
+	/**
+	 * 进入设备信息添加列表
+	 * @param vo
+	 * @param model
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping("/addlist")
+	public String addHost(Model model) throws Exception {
+		return "/management/terminal/add";
+	}
+	/**
+	 * 设备信息添加保存
+	 * @param vo
+	 * @param model
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value="/insertTerminal", method = RequestMethod.POST)
+	public ModelAndView insertTerminal(HttpServletRequest request,TItov_terminal_manage tItov_terminal_manage) throws Exception {
+		String  terminal_name=tItov_terminal_manage.getTerminal_name();
+		String  terminal_imei=tItov_terminal_manage.getTerminal_imei();
+		String  terminal_device_type=tItov_terminal_manage.getTerminal_device_type();
+		String  terminal_producer=tItov_terminal_manage.getTerminal_producer();
+		Date  	terminal_binding_date=tItov_terminal_manage.getTerminal_binding_date();
+		SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		String  terminal_binding_date2=formatter.format(terminal_binding_date);
+
+		
+		Map<String,Object> paramMap=new HashMap<String,Object>();
+		paramMap.put("terminal_name", terminal_name);
+		paramMap.put("terminal_imei", terminal_imei);
+		paramMap.put("terminal_device_type", terminal_device_type);
+		paramMap.put("terminal_producer", terminal_producer);
+		paramMap.put("terminal_binding_date", terminal_binding_date2);
+		
+		String result="";
+		result=new ConnRest().getResult(paramMap, "terminal.saveinfo");	
+		ObjectMapper mapper = new ObjectMapper();
+		JsonNode jsonNode = mapper.readTree(result);
+		JsonNode headNode = jsonNode.get("head");
+		if (headNode.get("error_code").toString().equals("0")) {
+			return ajaxDoneSuccess(getMessage("msg.operation.success"));
+		} else {
+				String error_msg = headNode.get("error_msg").toString();
+				return ajaxDoneError(error_msg);
+		}
+	}
+	/**
+	 * 进入设备信息修改列表
+	 * @param vo
+	 * @param model
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping("/editlist/{terminalId}")
+	public String editHost(@PathVariable("terminalId") int terminalId, Model model) throws Exception {
+		Map<String,Object> paramMap = new HashMap<String,Object>();
+		List<TItov_terminal_manage> list = new ArrayList<TItov_terminal_manage>();
+		paramMap.put("id", terminalId);
+		String result = "";
+		result = new ConnRest().getResult(paramMap, "getTerminalInfoById.get");
+		ObjectMapper mapper = new ObjectMapper();
+		JsonNode jsonNode = mapper.readTree(result);
+		JsonNode bodyNode = jsonNode.get("body");
+		System.out.println("body:" + bodyNode);
+		Map<String, Object> map = new HashMap<String, Object>();
+		Type mapType_v = new TypeToken<HashMap<String, Object>>() {
+		}.getType();
+		Gson gson_v = new Gson();
+		map = gson_v.fromJson(bodyNode.toString(), mapType_v);
+		Type listType = new TypeToken<ArrayList<TItov_terminal_manage>>() {
+		}.getType();
+		Gson gson_v1 = new Gson();
+		list = gson_v1.fromJson(map.get("terminalList").toString(), listType);		
+		model.addAttribute("terminalList", list);
+		return "/management/terminal/edit";
+	}
+	/**
+	 * 设备信息修改保存
+	 * @param vo
+	 * @param model
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping("/updateTerminal")
+	public ModelAndView updateTerminal(HttpServletRequest request,Model model,TItov_terminal_manage tItov_terminal_manage) throws Exception {
+		long id = tItov_terminal_manage.getUser_id();
+		String terminal_name = tItov_terminal_manage.getTerminal_name();
+		String terminal_imei = tItov_terminal_manage.getTerminal_imei();
+		String terminal_device_type = tItov_terminal_manage.getTerminal_device_type();
+		String terminal_producer = tItov_terminal_manage.getTerminal_producer();
+
+
+		Map<String,Object> paramMap=new HashMap<String,Object>();
+		paramMap.put("terminal_name", terminal_name);
+		paramMap.put("terminal_imei", terminal_imei);
+		paramMap.put("terminal_device_type", terminal_device_type);
+		paramMap.put("terminal_producer", terminal_producer);
+		paramMap.put("id", id);
+
+		/**
+		String pic = (String) request.getSession().getAttribute("filePath");
+		paramMap.put("pic", pic);
+		**/
+		//paramMap.put("id", hostId);
+		String result = "";
+		result = new ConnRest().getResult(paramMap, "updateTerminalInfo.upd");
+		ObjectMapper mapper = new ObjectMapper();
+		JsonNode jsonNode = mapper.readTree(result);
+		JsonNode headNode = jsonNode.get("head");
+		JsonNode bodyNode = jsonNode.get("body");
+		//System.out.println("body:" + bodyNode);
+		
+		if (null != bodyNode.get("result")&&("1").equals(bodyNode.get("result").toString())) {
+			
+			return ajaxDoneSuccess(getMessage("msg.operation.success"));
+			
+		} else {
+			String error_msg = headNode.get("error_msg").toString();
+			return ajaxDoneError(error_msg);
+		}
+	}
+	/**
+	 * 设备信息删除
+	 * @param vo
+	 * @param model
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping("/deleteTerminal/{terminalId}")
+	public ModelAndView deleteTerminal(@PathVariable("terminalId") int terminalId) throws Exception {
+		@SuppressWarnings("rawtypes")
+		int id = terminalId;
+		Map<String,Object> paramMap=new HashMap<String,Object>();
+		paramMap.put("id", terminalId);
+		String result = "";
+		result = new ConnRest().getResult(paramMap, "deleteTerminalInfo.upd");
+		ObjectMapper mapper = new ObjectMapper();
+		JsonNode jsonNode = mapper.readTree(result);
+		JsonNode headNode = jsonNode.get("head");
+		JsonNode bodyNode = jsonNode.get("body");
+		//System.out.println("body:" + bodyNode);
+		
+		if (null != bodyNode.get("result")&&("1").equals(bodyNode.get("result").toString())) {
+			
+			return ajaxDoneSuccess(getMessage("msg.operation.success"));
+			
+		}else if(null != bodyNode.get("result")&&("-99").equals(bodyNode.get("result").toString())){
+			String err="设备已绑定,无法删除";
+			return ajaxDoneError(err);
+		} 
+		else {
+			String error_msg = headNode.get("error_msg").toString();
+			return ajaxDoneError(error_msg);
+		}
+	}
+	
+	/**
+	 * 导入excel
+	 * @param vo
+	 * @param model
+	 * @return
+	 * @throws Exception
+	 */
+	@RequestMapping(value="/excelList")
+	public String excelList(Model model) {
+		return "/management/terminal/excelList";
+	}
+	/**
+	 * excel上传服务器
+	 * @param request
+	 * @param file
+	 * @return
+	 * @throws Exception 
+	 */
+	@RequestMapping(value="/excelUpload", method = RequestMethod.POST)
+	public ModelAndView fileUpload(HttpServletRequest request,MultipartFile  file) throws Exception
+	{
+		String realFileName = file.getOriginalFilename();
+		boolean bool= true;
+		if(null==realFileName || "".equals(realFileName))
+		{
+			return ajaxDoneError("请上传excel");
+		}
+		Long l = System.currentTimeMillis(); 
+		String timstamp = l.toString();
+		Integer ext_index=file.getOriginalFilename().toString().lastIndexOf(".");
+		 if(null!=file.getOriginalFilename() && !"".equals(file.getOriginalFilename()))
+         {
+        	 String ext=file.getOriginalFilename().toString().substring(ext_index);
+             if(!ext.equalsIgnoreCase(".xls"))
+             {
+             	  bool=false;
+             	  return ajaxDoneError("导入的excel格式不正确");
+             }
+         }
+		if(bool)
+		{				
+			// 获取路径  
+	        String ctxPath = request.getSession().getServletContext().getRealPath("/upload/excel");  
+	        File dirPath = new File(ctxPath);  
+			File pdirPath = new File(dirPath.getParent());
+			if(!pdirPath.exists()){
+				pdirPath.mkdirs();
+			}
+			if(!dirPath.exists()){
+				dirPath.mkdirs();
+			}
+	        File uploadFile = new File(ctxPath + "/"+timstamp+realFileName);  
+	        try {
+				FileCopyUtils.copy(file.getBytes(), uploadFile);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}  
+	        String error_msg ="导入数据成功";
+	        //request.getSession().setAttribute("filePath",timstamp+realFileName);
+	        //解析上传到服务端excel
+	        String url=ctxPath+"/"+timstamp+realFileName;
+	        int status=BatchImportTerminal(url);
+	        if(status!=0){
+		        return ajaxDoneSuccess(error_msg);
+	      }
+	        return ajaxDoneError("导入数据失败");
+		}
+		
+        	return ajaxDoneError("导入数据失败");
+	}
+	
+	/**
+	 * 调用sshop服务
+	 * @param request
+	 * @param file
+	 * @return
+	 * @throws Exception 
+	 */
+	private  int BatchImportTerminal(String url) throws Exception{
+		TItov_terminal_manage terminalInfo = null;
+		String result="";
+		JsonNode jsonNode=null;
+		JsonNode headNode=null;
+		try{
+			List<TItov_terminal_manage> list = readXls(url);
+			for (int i = 0; i < list.size(); i++) {
+				terminalInfo=list.get(i);
+				Map paramMap = new HashMap();
+				SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd");  
+				paramMap.put("terminal_name", terminalInfo.getTerminal_name());
+				paramMap.put("terminal_imei",terminalInfo.getTerminal_imei());
+				paramMap.put("terminal_device_type", terminalInfo.getTerminal_device_type());
+				paramMap.put("terminal_producer",terminalInfo.getTerminal_producer());
+				String terminal_binding_date=sdf.format(terminalInfo.getTerminal_binding_date());
+				paramMap.put("terminal_binding_date", terminal_binding_date);
+				result=new ConnRest().getResult(paramMap, "terminal.saveinfo");	
+				ObjectMapper mapper = new ObjectMapper();
+				jsonNode = mapper.readTree(result);
+				headNode = jsonNode.get("head");
+			}
+			if (headNode.get("error_code").toString().equals("0")) {
+					return 1;
+			} else {
+					String error_msg = headNode.get("error_msg").toString();
+					return 0;
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+			return 0;
+		}
+	}
+	
+	/**
+	 * 解析excel
+	 * @param request
+	 * @param file
+	 * @return
+	 * @throws IOException 
+	 */
+	private List<TItov_terminal_manage>readXls(String url) throws IOException{
+		InputStream is = new FileInputStream(url);
+		HSSFWorkbook hssfWorkbook = new HSSFWorkbook(is);
+		TItov_terminal_manage tZdcTerminal = null;
+		List<TItov_terminal_manage> list = new ArrayList<TItov_terminal_manage>();
+		// 循环工作表Sheet
+		for (int numSheet = 0; numSheet < hssfWorkbook.getNumberOfSheets(); numSheet++) {
+			HSSFSheet hssfSheet = hssfWorkbook.getSheetAt(numSheet);
+			if (hssfSheet == null) {
+				continue;
+			}
+			// 循环行Row
+			for (int rowNum = 1; rowNum <= hssfSheet.getLastRowNum(); rowNum++) {
+				HSSFRow hssfRow = hssfSheet.getRow(rowNum);
+				if (hssfRow != null) {
+					tZdcTerminal = new TItov_terminal_manage();
+					HSSFCell terminal_name = hssfRow.getCell(0);
+					HSSFCell terminal_imei = hssfRow.getCell(1);
+					HSSFCell terminal_type = hssfRow.getCell(2);
+					HSSFCell terminal_producer = hssfRow.getCell(3);
+					HSSFCell terminal_out_storage = hssfRow.getCell(4);
+					tZdcTerminal.setTerminal_name(getValue(terminal_name));
+					tZdcTerminal.setTerminal_imei(getValue(terminal_imei));
+					tZdcTerminal.setTerminal_device_type(getValue(terminal_type));
+					tZdcTerminal.setTerminal_producer(getValue(terminal_producer));
+					Date date = new Date();
+				    if (HSSFDateUtil.isCellDateFormatted(terminal_out_storage)) {
+				        double d = terminal_out_storage.getNumericCellValue();
+				         date = HSSFDateUtil.getJavaDate(d);
+				    } 
+				    tZdcTerminal.setTerminal_binding_date(date);
+					list.add(tZdcTerminal);
+				}
+			}
+		}
+		return list;
+	}
+	//值的校验
+	private String getValue(HSSFCell hssfCell) {
+        if (hssfCell.getCellType() == hssfCell.CELL_TYPE_BOOLEAN) {
+            // 返回布尔类型的值
+            return String.valueOf(hssfCell.getBooleanCellValue());
+        } else if (hssfCell.getCellType() == hssfCell.CELL_TYPE_NUMERIC) {
+            // 返回数值类型的值
+        	DecimalFormat df = new DecimalFormat("#");
+            return String.valueOf(df.format(hssfCell.getNumericCellValue()));
+        } else {
+            // 返回字符串类型的值
+            return String.valueOf(hssfCell.getStringCellValue());
+        }
+    }
+}

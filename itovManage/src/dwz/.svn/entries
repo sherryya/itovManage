@@ -1,0 +1,58 @@
+10
+
+dir
+812
+svn://125.211.221.231:10092/itovManage/src/dwz
+svn://125.211.221.231:10092
+
+
+
+2014-10-18T09:30:58.348055Z
+757
+zhaoshenghua
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+61297987-f3a8-47ec-a47e-7a75c30ad566
+
+adapter
+dir
+
+dal
+dir
+
+plugins
+dir
+
+cache
+dir
+
+persistence
+dir
+
+manageRest
+dir
+
+common
+dir
+
+business
+dir
+
+framework
+dir
+
+web
+dir
+

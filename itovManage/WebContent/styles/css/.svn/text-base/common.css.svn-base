@@ -1,0 +1,8 @@
+.mapBookmark
+{
+background: url(http://webmap1.map.bdimg.com/newmap/static/common/images/us_cursor_4c00be8.gif) no-repeat;
+overflow: hidden;
+width: 16px;
+height: 21px;
+cursor: pointer;
+}

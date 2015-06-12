@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//ibatis.apache.org//DTD Mapper 3.0//EN" "http://ibatis.apache.org/dtd/ibatis-3-mapper.dtd">
+
+<mapper namespace="dwz.persistence.mapper.TerminalInfoMapper">
+	<resultMap id="BaseResultMap" type="dwz.persistence.beans.TerminalInfo">
+       <result column="user_id" property="user_id" jdbcType="INTEGER" />
+       <result column="terminal_imei" property="terminal_imei" jdbcType="VARCHAR" />
+       <result column="terminal_status" property="terminal_status" jdbcType="VARCHAR" />
+   </resultMap>
+	<sql id="Base_Column_List">
+		user_id,
+		terminal_imei,
+		terminal_status
+	</sql>
+	<select id="queryTerminalList" parameterType="dwz.persistence.beans.TerminalInfo" resultMap="BaseResultMap">
+		SELECT 
+			<include refid="Base_Column_List" />
+		FROM `t_itov_terminal` t where t.`terminal_status`!=1 ORDER BY t.`terminal_binding_date`   LIMIT #{startLimit},#{pageSize}
+	</select>
+	<select id="queryCountTerminalList"  resultType="java.lang.Integer">
+		SELECT 
+			count(*)
+		FROM `t_itov_terminal` t   where t.`terminal_status`!=1
+	</select>
+
+</mapper>
+

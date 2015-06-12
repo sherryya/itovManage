@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//ibatis.apache.org//DTD Mapper 3.0//EN" "http://ibatis.apache.org/dtd/ibatis-3-mapper.dtd">
+
+<mapper namespace="dwz.persistence.mapper.InfTestMapper">
+	<resultMap id="rm" type="dwz.persistence.beans.InfoTest">
+		<result property="id" jdbcType="INTEGER" column="id" />
+		<result property="name" jdbcType="VARCHAR" column="name" />
+		<result property="nick_name" jdbcType="VARCHAR" column="nick_name" />
+		<result property="sex" jdbcType="INTEGER" column="sex" />
+		<result property="age" jdbcType="INTEGER" column="age" />
+	</resultMap>
+	<sql id="Base_Column_List">
+		id,name,nick_name,sex,age
+	</sql>
+	<select id="findPageBreakByCondition" resultMap="rm"
+		parameterType="map">
+		SELECT
+		<include refid="Base_Column_List" />
+		from zsh_test c
+		<trim prefix="WHERE" prefixOverrides="AND|OR">
+			<if test="sex != 0">
+				c.sex = #{sex}
+			</if>
+		</trim>
+	</select>
+	<select id="countAll0" resultType="java.lang.Integer"  	parameterType="map">
+		SELECT count(ID) FROM zsh_test  c
+		<trim prefix="WHERE" prefixOverrides="AND|OR">
+			<if test="sex != 0">
+				c.sex = #{sex}
+			</if>
+		</trim>
+	</select>
+	
+	
+	<insert id="insert" useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO zsh_test (
+			id,
+			name,
+			nick_name,
+			sex,
+			age
+		) VALUES (
+			#{id},
+			#{name},
+			#{nick_name},
+			#{sex},
+			#{age}
+		)
+	</insert>
+	
+	
+	 <update id="update" parameterType="dwz.persistence.beans.InfoTest">
+		UPDATE zsh_test SET
+			name = #{name},
+			nick_name = #{nick_name},
+			age = #{age},
+			sex = #{sex}
+		WHERE 
+			id = #{id} 
+	</update>
+	
+	
+	<select id="load" parameterType="java.lang.Integer" resultMap="rm">
+		SELECT 
+			<include refid="Base_Column_List" />
+		FROM zsh_test 
+		WHERE 
+			id = #{id} 
+	</select>
+	
+	<delete id="delete" parameterType="java.lang.Integer">
+		DELETE FROM zsh_test WHERE
+		id = #{id} 
+	</delete>
+</mapper>
+
